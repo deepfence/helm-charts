@@ -1,0 +1,102 @@
+# Default values for deepfence.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+registry:
+  name: "quay.io"
+  # Set docker hub username and password provided by Deepfence
+  # This will create a secret called "deepfence-docker-secret"
+  username: ""
+  password: ""
+  # If kubernetes secret is already defined externally, change following value to false
+  # https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+  createRegistrySecret: true
+
+image:
+  # deepfence agent runs as a daemonset in all nodes in the cluster
+  name: quay.io/deepfenceio/deepfence_agent
+  tag: 3.7.0
+  # cluster agent runs as a single pod
+  clusterAgentImageName: quay.io/deepfenceio/deepfence_discovery
+  clusterAgentImageTag: 3.7.0
+  pullPolicy: Always
+  pullSecretName: deepfence-docker-secret
+
+managementConsoleUrl: ""
+managementConsolePort: "443"
+
+# Auth: Get deepfence api key from UI -> Settings -> User Management
+deepfenceKey: ""
+# If kubernetes secret is already defined externally, change following value to false
+createDeepfenceKeySecret: true
+
+# Traffic Analysis: Enable / disable on startup. This can be later changed from UI also.
+# trafficAnalysis:
+#   start: "Y"/"N"
+#   processes: "sshd:943, docker-proxy:27017, /usr/local/go/bin/go:753"
+#   mode: "allow"/"deny"/"all"
+trafficAnalysis:
+  start: ""
+  processes: ""
+  mode: ""
+
+dfFim: "N"
+
+# Suffix cloud instance id to hostnames
+instanceIdSuffix: "N"
+
+# comma separated list of tags (labels) to set for all agents
+userDefinedTags: ""
+
+# (Optional) Set custom name for the cluster and hostname prefix for agent vm's to easily identify in Deepfence UI.
+# Example: prod-cluster or dev1-cluster
+# It will be suffixed with hostname - prod-cluster-aks-agentpool-123456-vmss000001
+clusterName: ""
+
+enableGraphReport: true
+
+# Mount container runtime socket path to agent pod. Agent will detect which runtime it is using these files.
+mountContainerRuntimeSocket:
+  dockerSock: false
+  dockerSockPath: "/var/run/docker.sock"
+  containerdSock: true
+  containerdSockPath: "/run/containerd/containerd.sock"
+
+resources:
+  requests:
+    cpu: 150m
+    memory: 512Mi
+  limits:
+    cpu: 1500m
+    memory: 1536Mi
+
+clusterAgentResources:
+  requests:
+    cpu: 25m
+    memory: 80Mi
+  limits:
+    cpu: 1500m
+    memory: 1536Mi
+
+nodeSelector: {"kubernetes.io/os": "linux"}
+
+tolerations:
+  - operator: "Exists"
+    effect: "NoSchedule"
+  - operator: "Exists"
+    effect: "NoExecute"
+
+affinity: {}
+
+serviceAccount:
+  # Annotations to add to the service account
+  annotations: {}
+  name: "deepfence-agent"
+
+nameOverride: ""
+fullnameOverride: ""
+
+clusterAgentService:
+  name: deepfence-cluster-agent-service
+  port: 8079
+  targetPort: 8079

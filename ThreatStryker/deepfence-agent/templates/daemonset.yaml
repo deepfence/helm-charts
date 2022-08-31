@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: deepfence-agent
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "deepfence-agent.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "deepfence-agent.selectorLabels" . | nindent 6 }}
+  updateStrategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        {{- include "deepfence-agent.selectorLabels" . | nindent 8 }}
+    spec:
+      hostPID: true
+      hostNetwork: true
+      serviceAccountName: {{ .Values.serviceAccount.name }}
+      dnsPolicy: ClusterFirstWithHostNet
+
+      volumes:
+        {{- if .Values.mountContainerRuntimeSocket.dockerSock }}
+        - name: docker-sock
+          hostPath:
+            path: {{ .Values.mountContainerRuntimeSocket.dockerSockPath }}
+            type: Socket
+        - name: docker-file
+          hostPath:
+            path: /var/lib/docker
+            type: Directory
+        {{- end }}
+        {{- if .Values.mountContainerRuntimeSocket.containerdSock }}
+        - name: containerd-sock
+          hostPath:
+            path: {{ .Values.mountContainerRuntimeSocket.containerdSockPath }}
+            type: Socket
+        {{- end }}
+        - name: kernel-sys
+          hostPath:
+            path: /sys/kernel/debug
+            type: Directory
+        - name: host-fs
+          hostPath:
+            path: /
+            type: Directory
+        - name: fenced-path
+          emptyDir: {}
+        - name: fenced-path-compliance
+          emptyDir: {}
+        - name: fenced-path-compliance-scan-logs
+          emptyDir: {}
+
+      containers:
+        - name: deepfence-agent
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            privileged: true
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}
+          env:
+            - name: DEEPFENCE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "deepfence-key"
+                  key: "deepfence-key"
+            - name: USER_DEFINED_TAGS
+              value: {{ .Values.userDefinedTags }}
+            - name: DF_ENABLE_PROCESS_REPORT
+              value: "{{ .Values.enableGraphReport }}"
+            - name: DF_ENABLE_CONNECTIONS_REPORT
+              value: "{{ .Values.enableGraphReport }}"
+            - name: DF_TRAFFIC_ANALYSIS_ON
+              value: "{{ .Values.trafficAnalysis.start }}"
+            - name: DF_TRAFFIC_ANALYSIS_PROCESSES
+              value: "{{ .Values.trafficAnalysis.processes }}"
+            - name: DF_TRAFFIC_ANALYSIS_MODE
+              value: "{{ .Values.trafficAnalysis.mode }}"
+            - name: MGMT_CONSOLE_URL
+              value: "{{ required "managementConsoleUrl is required" .Values.managementConsoleUrl }}"
+            - name: MGMT_CONSOLE_PORT
+              value: "{{ required "managementConsolePort is required" .Values.managementConsolePort }}"
+            - name: DF_KUBERNETES_ON
+              value: "Y"
+            - name: DF_FIM_ON
+              value: "{{ .Values.dfFim }}"
+            - name: INSTANCE_ID_SUFFIX
+              value: "{{ .Values.instanceIdSuffix }}"
+            - name: DF_CLUSTER_NAME
+              value: "{{ .Values.clusterName }}"
+            - name: AGENT_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- if .Values.clusterName }}
+            - name: SCOPE_HOSTNAME
+              value: "{{ .Values.clusterName }}-$(AGENT_HOSTNAME)"
+            {{- else }}
+            - name: SCOPE_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            {{- end }}
+            - name: AGENT_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENT_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            {{- if .Values.mountContainerRuntimeSocket.dockerSock }}
+            - mountPath: {{ .Values.mountContainerRuntimeSocket.dockerSockPath }}
+              name: docker-sock
+            - mountPath: /fenced/mnt/host/var/lib/docker
+              name: docker-file
+            {{ end }}
+            {{- if .Values.mountContainerRuntimeSocket.containerdSock }}
+            - mountPath: {{ .Values.mountContainerRuntimeSocket.containerdSockPath }}
+              name: containerd-sock
+            {{ end }}
+            - mountPath: /sys/kernel/debug
+              name: kernel-sys
+            - mountPath: /fenced/mnt/host
+              name: host-fs
+              readOnly: true
+            - mountPath: /var/log/fenced
+              name: fenced-path
+            - mountPath: /var/log/fenced/compliance
+              name: fenced-path-compliance
+            - mountPath: /var/log/fenced/compliance-scan-logs
+              name: fenced-path-compliance-scan-logs
+      imagePullSecrets:
+        - name: {{ .Values.image.pullSecretName }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+      {{- toYaml . | nindent 8 }}
+      {{- end }}

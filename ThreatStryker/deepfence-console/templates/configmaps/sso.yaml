@@ -1,0 +1,13 @@
+{{- if .Values.sso.ssoEnabled }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "sso-secret-{{ include "deepfence-console.fullname" . }}"
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "deepfence-console.labels" . | nindent 4 }}
+type: Opaque
+data:
+{{ (.Files.Glob "sso/*").AsSecrets | indent 2 }}
+{{- end }}
