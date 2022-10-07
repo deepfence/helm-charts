@@ -15,7 +15,7 @@ registry:
   createRegistrySecret: true
 
 image:
-  tag: 3.7.0
+  tag: 3.7.1
   pullSecretName: docker-deepfence-secret
 
 # Use custom ssl certificate for Deepfence UI
