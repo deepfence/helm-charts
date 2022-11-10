@@ -64,8 +64,6 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: DEEPFENCE_URL
-            value: "{{ .Values.sso.deepfenceUrl }}"
           volumeMounts:
           - mountPath: /etc/promtail
             name: promtail-config
@@ -153,6 +151,8 @@ spec:
                 configMapKeyRef:
                   name: "main-cm-{{ include "deepfence-console.fullname" . }}"
                   key: redis_port
+            - name: DEEPFENCE_URL
+              value: "{{ .Values.sso.deepfenceUrl }}"
           resources:
             requests:
               memory: 512Mi
