@@ -7,6 +7,6 @@ spec:
   selector:
   {{- include "deepfence-cluster-agent.selectorLabels" . | nindent 4 }}
   ports:
-    - protocol: TCP
-      port: {{ .Values.clusterAgentService.port }}
-      targetPort: {{ .Values.clusterAgentService.targetPort }}
+  - protocol: TCP
+    port: {{ .Values.clusterAgentService.port }}
+    targetPort: {{ .Values.clusterAgentService.port }}

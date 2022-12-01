@@ -98,5 +98,4 @@ fullnameOverride: ""
 
 clusterAgentService:
   name: deepfence-cluster-agent-service
-  port: 8079
-  targetPort: 8079
+  port: 8080
